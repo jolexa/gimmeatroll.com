@@ -1,0 +1,173 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: API GW / Lambda for gimmeatroll.com (github.com/jolexa/gimmeatroll.com)
+
+Parameters:
+  DomainName:
+    Type: String
+  ZoneName:
+    Type: String
+  Bucket:
+    Type: String
+  md5:
+    Type: String
+
+Resources:
+  ApiGW:
+    Type: AWS::Serverless::Api
+    Properties:
+        StageName: prod
+        DefinitionBody:
+            swagger: 2.0
+            info:
+                title: !Sub "${AWS::StackName}"
+            paths:
+              "/":
+                get:
+                  produces:
+                  - "text/html"
+                  x-amazon-apigateway-integration:
+                    uri:
+                      Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaFunction.Arn}/invocations
+                    responses:
+                      default:
+                        statusCode: "200"
+                        responseParameters:
+                          method.response.header.Content-Type: "'text/html'"
+                        responseTemplates:
+                          text/html: "$input.path('$')"
+                    passthroughBehavior: "when_no_match"
+                    httpMethod: "POST"
+                    contentHandling: "CONVERT_TO_TEXT"
+                    type: "aws"
+                  responses:
+                    '200':
+                      description: "200 response"
+                      headers:
+                        Content-Type:
+                          type: "string"
+
+  LambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: hello.handler
+      Runtime: python3.6
+      Timeout: 10
+      CodeUri:
+        Bucket: !Ref Bucket
+        Key: !Ref md5
+      Events:
+        GetApi:
+          Type: Api
+          Properties:
+            Path: /
+            Method: GET
+            RestApiId: !Ref ApiGW
+
+  CustomListACMCertRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Sid: 'Lambda'
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Path: "/cfn/"
+      Policies:
+      - PolicyName: ACMCerts
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+            - acm:ListCertificates
+            Resource: '*'
+
+  CustomACMLookup:
+    Type: Custom::ListACMCert
+    Properties:
+        ServiceToken: !GetAtt CustomListACMCertFunction.Arn
+        CertDomainName: !Ref DomainName
+
+  CustomListACMCertFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Custom Cloudformation Resource to return the ARN of ACM
+      Runtime: python2.7
+      Handler: index.handler
+      Role: !GetAtt CustomListACMCertRole.Arn
+      Timeout: 120
+      Code:
+        ZipFile: |
+          import logging
+          import json
+          import boto3
+          import cfnresponse
+
+          logging.basicConfig()
+          logging.getLogger('boto3').setLevel(logging.CRITICAL)
+          logging.getLogger('botocore').setLevel(logging.CRITICAL)
+          logger = logging.getLogger("mylogger")
+          logger.setLevel(logging.INFO)
+
+          def handler(event, context):
+              client = boto3.client('apigateway')
+              logger.info(json.dumps(event, indent=2))
+
+              ResponseURL=event['ResponseURL']
+              StackId=event['StackId']
+              RequestId=event['RequestId']
+              ResourceType=event['ResourceType']
+              RequestType=event['RequestType']
+              LogicalResourceId=event['LogicalResourceId']
+              PhysicalResourceId=event.get('PhysicalResourceId')
+              responseData = {}
+              CertDomainName=event['ResourceProperties']['CertDomainName']
+
+              certs = boto3.client('acm', region_name='us-east-1').list_certificates()
+              for i in certs['CertificateSummaryList']:
+                  if i['DomainName'] == CertDomainName:
+                      responseData['CertificateArn'] = i['CertificateArn']
+              # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-lambda-function-code.html#cfn-lambda-function-code-cfnresponsemodule
+              cfnresponse.send(event, context, 'SUCCESS',
+                  responseData, "CustomACMCertArnId")
+
+  AliasDNSEntry:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      AliasTarget:
+        DNSName: !GetAtt CustomDomain.DistributionDomainName
+        HostedZoneId: Z2FDTNDATAQYW2 # CloudFront zone id hardcoded by design
+      HostedZoneName: !Ref ZoneName
+      Name: !Ref DomainName
+      Type: A
+  AliasDNSEntry6:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      AliasTarget:
+        DNSName: !GetAtt CustomDomain.DistributionDomainName
+        HostedZoneId: Z2FDTNDATAQYW2 # CloudFront zone id hardcoded by design
+      HostedZoneName: !Ref ZoneName
+      Name: !Ref DomainName
+      Type: AAAA
+
+  CustomDomain:
+    Type: 'AWS::ApiGateway::DomainName'
+    Properties:
+      DomainName: !Ref DomainName
+      CertificateArn: !GetAtt CustomACMLookup.CertificateArn
+
+  BasePathMapping:
+    Type: "AWS::ApiGateway::BasePathMapping"
+    DependsOn:
+      - CustomDomain
+    Properties:
+      DomainName: !Ref DomainName
+      RestApiId: !Ref ApiGW
+      Stage: prod

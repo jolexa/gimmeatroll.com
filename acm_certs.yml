@@ -1,0 +1,18 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ACM Certs for gimmeatroll.com (github.com/jolexa/gimmeatroll.com)
+
+Parameters:
+  ACMUrl:
+    Type: String
+    Description: URL To generate ACM Cert
+
+Outputs:
+  ACMCertArn:
+    Description: "ACM Cert Arn"
+    Value: !Ref ACMCert
+
+Resources:
+  ACMCert:
+    Type: "AWS::CertificateManager::Certificate"
+    Properties:
+      DomainName: !Ref ACMUrl
