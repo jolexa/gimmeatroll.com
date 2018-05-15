@@ -50,7 +50,7 @@ Resources:
   LambdaFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: hello.handler
+      Handler: main.handler
       Runtime: python3.6
       Timeout: 10
       CodeUri:
