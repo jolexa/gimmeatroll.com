@@ -46,6 +46,30 @@ Resources:
                       headers:
                         Content-Type:
                           type: "string"
+              "/{proxy+}":
+                get:
+                  produces:
+                  - "text/html"
+                  x-amazon-apigateway-integration:
+                    uri:
+                      Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaFunction.Arn}/invocations
+                    responses:
+                      default:
+                        statusCode: "200"
+                        responseParameters:
+                          method.response.header.Content-Type: "'text/html'"
+                        responseTemplates:
+                          text/html: "$input.path('$')"
+                    passthroughBehavior: "when_no_match"
+                    httpMethod: "POST"
+                    contentHandling: "CONVERT_TO_TEXT"
+                    type: "aws"
+                  responses:
+                    '200':
+                      description: "200 response"
+                      headers:
+                        Content-Type:
+                          type: "string"
 
   LambdaFunctionRole:
     Type: AWS::IAM::Role
@@ -87,6 +111,12 @@ Resources:
           Type: Api
           Properties:
             Path: /
+            Method: GET
+            RestApiId: !Ref ApiGW
+        GetApiProxyPlus:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
             Method: GET
             RestApiId: !Ref ApiGW
 
