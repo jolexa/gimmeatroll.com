@@ -18,6 +18,12 @@ Resources:
   ApiGW:
     Type: AWS::Serverless::Api
     Properties:
+        MethodSettings:
+        - ThrottlingBurstLimit: 2
+          ThrottlingRateLimit: 1
+          ResourcePath: "/*"
+          HttpMethod: "*"
+
         StageName: prod
         DefinitionBody:
             swagger: 2.0

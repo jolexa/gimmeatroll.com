@@ -26,3 +26,9 @@ Obviously, I cannot control this. So, to workaround that, this site does the
 _same thing_ for any path on the url. That means,
 https://gimmeatroll.com/some_text_goes_here
 will also return a random gif. Now you can troll all the time. :trollface:
+
+#### Rate Limiting?
+> _"What if this goes viral?"_
+
+True! I don't want to get charged! There is a rate limit of 1 req/s on the site.
+At capacity, - this will still result in a $3.50+ service fee. =/
