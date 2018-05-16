@@ -1,6 +1,7 @@
 STACKNAME_BASE="gimmeatroll"
 REGION="us-east-2"
 URL="gimmeatroll.com"
+URL2="www.gimmeatroll.com"
 ZONE="gimmeatroll.com."
 BUCKET="gimmeatroll"
 
@@ -19,6 +20,7 @@ deploy-apigw: deploy-acm prep
 		--stack-name $(STACKNAME_BASE)-com \
 		--region $(REGION) \
 		--parameter-overrides "DomainName=$(URL)" \
+		"DomainName2=$(URL2)" \
 		"ZoneName=$(ZONE)" \
 		"Bucket=$(BUCKET)" \
 		"md5=$(shell md5sum lambda/* | md5sum | cut -d ' ' -f 1)" \
@@ -31,4 +33,5 @@ deploy-acm:
 		--stack-name $(STACKNAME_BASE)-acm-certs \
 		--region us-east-1 \
 		--parameter-overrides "ACMUrl=$(URL)" \
+		"ACMUrl2=$(URL2)" \
 		--capabilities CAPABILITY_IAM || exit 0

@@ -12,6 +12,7 @@ troll gif.
 
 This site is powered by a CloudFormation template that provisions:
 * Route 53
+* ACM Certificate (SSL)
 * API Gateway with Custom Domain
 * Lambda
 * S3

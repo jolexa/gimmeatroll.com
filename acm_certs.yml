@@ -5,14 +5,24 @@ Parameters:
   ACMUrl:
     Type: String
     Description: URL To generate ACM Cert
+  ACMUrl2:
+    Type: String
+    Description: URL To generate ACM Cert
 
 Outputs:
   ACMCertArn:
     Description: "ACM Cert Arn"
     Value: !Ref ACMCert
+  ACMCertArn2:
+    Description: "ACM Cert Arn"
+    Value: !Ref ACMCert2
 
 Resources:
   ACMCert:
     Type: "AWS::CertificateManager::Certificate"
     Properties:
       DomainName: !Ref ACMUrl
+  ACMCert2:
+    Type: "AWS::CertificateManager::Certificate"
+    Properties:
+      DomainName: !Ref ACMUrl2
