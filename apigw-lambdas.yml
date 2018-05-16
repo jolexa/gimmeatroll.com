@@ -47,12 +47,38 @@ Resources:
                         Content-Type:
                           type: "string"
 
+  LambdaFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Sid: 'Lambda'
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Path: "/cfn/"
+      Policies:
+      - PolicyName: S3List
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:ListObjectsV2
+            Resource: 'arn:aws:s3:::gimmeatroll.com'
+
   LambdaFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: main.handler
       Runtime: python3.6
       Timeout: 10
+      Role: !GetAtt LambdaFunctionRole.Arn
       CodeUri:
         Bucket: !Ref Bucket
         Key: !Ref md5
